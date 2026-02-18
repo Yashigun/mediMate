@@ -1,5 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
+dotenv.config();
+
 import connectDB from './database/db.conect.js';
 import bodyParser from 'body-parser';
 import cors from 'cors';
@@ -8,8 +10,6 @@ import authRouter from './routes/authRouter.js';
 const app = express();
 
 connectDB();
-
-dotenv.config();
 
 app.use(bodyParser.json());
 

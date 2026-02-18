@@ -76,40 +76,54 @@ const MapComponent = () => {
       );
       out geom;
     `;
-    
-    try {
-      const response = await fetch("https://overpass-api.de/api/interpreter", {
-        method: 'POST',
-        body: query,
-        headers: {
-          'Content-Type': 'text/plain',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Overpass API request failed');
+
+    const mirrors = [
+      "https://overpass-api.de/api/interpreter",
+      "https://overpass.kumi.systems/api/interpreter",
+      "https://overpass.openstreetmap.ru/api/interpreter",
+    ];
+
+    for (const url of mirrors) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+        const response = await fetch(url, {
+          method: 'POST',
+          body: query,
+          headers: { 'Content-Type': 'text/plain' },
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) continue;
+
+        const data = await response.json();
+
+        if (data.elements && data.elements.length > 0) {
+          const nodes = data.elements
+            .filter(el => el.lat && el.lon)
+            .map((el) => ({
+              name: el.tags?.name || `Unnamed ${el.tags?.amenity}`,
+              coords: [el.lat, el.lon],
+              type: el.tags?.amenity,
+              address: el.tags?.["addr:full"] || el.tags?.["addr:street"] || "Address not available"
+            }));
+          setPlaces(nodes.slice(0, 20));
+          return;
+        } else {
+          setPlaces(fallbackHospitals);
+          return;
+        }
+      } catch (err) {
+        console.warn(`Overpass mirror failed (${url}):`, err.message);
       }
-      
-      const data = await response.json();
-      
-      if (data.elements && data.elements.length > 0) {
-        const nodes = data.elements
-          .filter(el => el.lat && el.lon)
-          .map((el) => ({
-            name: el.tags?.name || `Unnamed ${el.tags?.amenity}`,
-            coords: [el.lat, el.lon],
-            type: el.tags?.amenity,
-            address: el.tags?.["addr:full"] || el.tags?.["addr:street"] || "Address not available"
-          }));
-        setPlaces(nodes.slice(0, 20));
-      } else {
-        console.log("No places found via Overpass API, using fallback");
-        setPlaces(fallbackHospitals);
-      }
-    } catch (err) {
-      console.error("Overpass API error:", err);
-      setPlaces(fallbackHospitals);
     }
+
+    // All mirrors failed
+    console.error("All Overpass mirrors failed, using fallback");
+    setPlaces(fallbackHospitals);
   };
 
   const getUserLocation = () => {
