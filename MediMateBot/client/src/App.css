@@ -1,3 +1,9 @@
+/* ═══════════════════════════════════════════════════════════
+   MediMate Bot — UI aligned with Miffy landing page aesthetic
+   Design tokens: teal/navy palette, glassmorphism, rounded-3xl
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── App shell ──────────────────────────────────────────── */
 .app {
   display: flex;
   flex-direction: column;
@@ -6,15 +12,18 @@
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 1rem;
   overflow: hidden;
+  /* Deep navy-to-teal gradient — mirrors landing page hero */
   background: linear-gradient(135deg, #0a1628 0%, #0d2137 40%, #02415a 100%);
   color: #fff;
 }
 
+/* ── Header ─────────────────────────────────────────────── */
 .header {
   position: sticky;
   top: 0;
   z-index: 10;
   padding: 0.875rem 1.5rem;
+  /* Glassmorphism — landing page contact form style */
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -56,6 +65,7 @@
   font-size: 1.25rem;
   font-weight: 700;
   margin: 0;
+  /* Gradient text — matches landing page hero heading style */
   background: linear-gradient(90deg, #ffffff, #7dd3fc);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -100,6 +110,7 @@
   50%       { opacity: 0.4; }
 }
 
+/* ── Chat box ────────────────────────────────────────────── */
 .chat-box {
   flex: 1;
   overflow-y: auto;
@@ -110,6 +121,7 @@
   z-index: 1;
 }
 
+/* ── Welcome / empty state ───────────────────────────────── */
 .welcome-card {
   margin: auto;
   text-align: center;
@@ -146,6 +158,7 @@
   margin: 0 0 1.5rem;
 }
 
+/* Quick-prompt chips */
 .quick-chips {
   display: flex;
   flex-wrap: wrap;
@@ -171,6 +184,7 @@
   color: #fff;
 }
 
+/* ── Messages ────────────────────────────────────────────── */
 .message {
   display: flex;
   align-items: flex-end;
@@ -196,6 +210,7 @@
   align-self: flex-end;
 }
 
+/* User bubble — gradient matching the landing page CTA buttons */
 .message.user .message-bubble {
   background: linear-gradient(135deg, #036280, #0369a1);
   color: #fff;
@@ -208,6 +223,7 @@
   word-wrap: break-word;
 }
 
+/* Bot bubble — white glassmorphism card */
 .message.bot .message-bubble {
   background: rgba(255, 255, 255, 0.95);
   color: #0f172a;
@@ -221,6 +237,7 @@
   border: 1px solid rgba(255,255,255,0.6);
 }
 
+/* Bot reply section formatting */
 .bot-reply p,
 .bot-reply div {
   margin: 0.35rem 0;
@@ -245,6 +262,7 @@
   font-size: 0.82rem;
 }
 
+/* ── Bottom input area ───────────────────────────────────── */
 .input-area {
   z-index: 2;
   padding: 0.75rem 1.5rem 1.25rem;
@@ -286,6 +304,7 @@
   opacity: 0.5;
 }
 
+/* ── Mic button ──────────────────────────────────────────── */
 .mic-btn {
   width: 42px;
   height: 42px;
@@ -319,6 +338,7 @@
   transform: none;
 }
 
+/* Expanding pulse rings while recording */
 .mic-btn.listening::before,
 .mic-btn.listening::after {
   content: "";
@@ -338,6 +358,7 @@
   100% { transform: scale(2.4); opacity: 0;   }
 }
 
+/* ── Send button ─────────────────────────────────────────── */
 .send-btn {
   width: 42px;
   height: 42px;
@@ -365,6 +386,7 @@
   transform: none;
 }
 
+/* ── Voice status & error banners ────────────────────────── */
 .voice-status {
   text-align: center;
   font-size: 0.8rem;
@@ -385,6 +407,7 @@
   margin: 0;
 }
 
+/* ── Scrollbar ───────────────────────────────────────────── */
 .chat-box::-webkit-scrollbar       { width: 5px; }
 .chat-box::-webkit-scrollbar-track { background: transparent; }
 .chat-box::-webkit-scrollbar-thumb {
@@ -396,6 +419,7 @@
 }
 .chat-box { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent; }
 
+/* ── Animations ──────────────────────────────────────────── */
 @keyframes slideIn {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }

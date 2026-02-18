@@ -7,29 +7,35 @@ function App() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
 
-  const [isListening, setIsListening] = useState(false);  
-  const [isTranscribing, setIsTranscribing] = useState(false); 
+  // Voice state
+  const [isListening, setIsListening] = useState(false);   // mic is recording
+  const [isTranscribing, setIsTranscribing] = useState(false); // waiting for Gemini
   const [voiceError, setVoiceError] = useState(null);
   const [voiceSupported, setVoiceSupported] = useState(false);
   const [reportGenerated, setReportGenerated] = useState(false);
 
   const chatEndRef = useRef(null);
-  const mediaRecorderRef = useRef(null);  
-  const audioChunksRef = useRef([]);   
+  const mediaRecorderRef = useRef(null);  // MediaRecorder instance
+  const audioChunksRef = useRef([]);      // raw audio chunks collected while recording
 
+  // Auto-scroll to bottom when messages change (no animation so input stays visually fixed)
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
   }, [messages]);
 
+  // Check MediaRecorder support on mount
   useEffect(() => {
     setVoiceSupported(!!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder));
   }, []);
 
+  // sendMessage accepts an optional textOverride (used by voice path)
+  // When called from keyboard/button, it reads from input state as before
   const sendMessage = async (textOverride) => {
     const text = typeof textOverride === "string" ? textOverride : input;
     if (!text.trim()) return;
     setInput("");
 
+    // Include this new turn in the history we send to the backend
     const newMessages = [...messages, { role: "user", text }];
     setMessages(newMessages);
 
@@ -39,7 +45,7 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           symptoms: text,
-          history: newMessages, 
+          history: newMessages, // give Gemini memory of the chat so far
         }),
       });
       const data = await res.json();
@@ -47,6 +53,7 @@ function App() {
       const finalMessages = [...newMessages, botMessage];
       setMessages(finalMessages);
 
+      // If the user appears to be ending the conversation, auto-generate a PDF report once.
       const lower = text.toLowerCase();
       const isEnding =
         /\bbye\b/.test(lower) ||
@@ -86,6 +93,8 @@ function App() {
     }
   };
 
+  // Record audio with MediaRecorder, then transcribe via Gemini on the backend.
+  // This avoids Chrome's SpeechRecognition which requires speech.googleapis.com.
   const startListening = async () => {
     if (isListening || isTranscribing) return;
     setVoiceError(null);
@@ -96,13 +105,16 @@ function App() {
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
 
+      // Collect audio data as it comes in
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
 
+      // When recording stops: convert blob → base64 → POST /transcribe → sendMessage
       mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
+        stream.getTracks().forEach((t) => t.stop()); // release mic immediately
 
+        // Use the actual MIME type the browser chose (e.g. "audio/webm;codecs=opus")
         const actualMimeType = mediaRecorder.mimeType || "audio/webm";
         const blob = new Blob(audioChunksRef.current, { type: actualMimeType });
         audioChunksRef.current = [];
@@ -116,7 +128,7 @@ function App() {
 
         const reader = new FileReader();
         reader.onloadend = async () => {
-          const base64 = reader.result.split(",")[1]; 
+          const base64 = reader.result.split(",")[1]; // strip the data-URL prefix
           try {
             const res = await fetch("http://localhost:8080/transcribe", {
               method: "POST",
@@ -126,8 +138,9 @@ function App() {
             const data = await res.json();
             setIsTranscribing(false);
             if (data.transcript) {
-              sendMessage(data.transcript); 
+              sendMessage(data.transcript); // hand off to existing pipeline
             } else {
+              // data.error is the real message from the backend
               setVoiceError(data.error || "Couldn't understand audio. Please try again or type.");
             }
           } catch {
@@ -152,7 +165,7 @@ function App() {
   const stopListening = () => {
     if (!mediaRecorderRef.current || !isListening) return;
     setIsListening(false);
-    mediaRecorderRef.current.stop(); 
+    mediaRecorderRef.current.stop(); // triggers onstop → transcription
   };
 
   const toggleListening = () => {
@@ -205,6 +218,8 @@ function App() {
       }
     });
 
+    // If we couldn't detect any of the structured sections,
+    // fall back to showing the raw text so general conversation still appears.
     if (Object.keys(sections).length === 0) {
       return (
         <div className="bot-reply" style={{ lineHeight: "1.6" }}>
@@ -263,12 +278,14 @@ function App() {
 
   return (
     <div className="app">
+      {/* Background floating shapes — more vibrant to match landing page */}
       <FloatingShape color="#0369a1" size={320} top="5%"  left="10%" delay={0} />
       <FloatingShape color="#0d9488" size={260} top="45%" left="72%" delay={3} />
       <FloatingShape color="#02415a" size={220} top="70%" left="20%" delay={5} />
       <FloatingShape color="#0891b2" size={180} top="25%" left="80%" delay={2} />
       <FloatingShape color="#134e4a" size={150} top="80%" left="60%" delay={4} />
 
+      {/* ── Header ── */}
       <div className="header">
         <div className="header-inner">
           <div className="header-brand">
@@ -287,9 +304,10 @@ function App() {
         </div>
       </div>
 
+      {/* ── Chat window ── */}
       <div className="chat-box">
 
-        {/* Empty state*/}
+        {/* Empty state — shown before any messages */}
         {messages.length === 0 && (
           <div className="welcome-card">
             <div className="welcome-emoji">🩺</div>
@@ -329,18 +347,18 @@ function App() {
         <div ref={chatEndRef} />
       </div>
 
-      {/* input arae*/}
+      {/* ── Bottom input area ── */}
       <div className="input-area">
 
-        {/* voice status */}
+        {/* Voice status / error banners */}
         {isListening && (
           <p className="voice-status" aria-live="polite">
-            Recording... click the mic again to stop
+            🎙 Recording... click the mic again to stop
           </p>
         )}
         {isTranscribing && (
           <p className="voice-status" aria-live="polite">
-            Transcribing with love and patience...
+            ✨ Transcribing with Gemini...
           </p>
         )}
         {voiceError && (
